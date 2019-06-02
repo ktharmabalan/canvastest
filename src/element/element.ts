@@ -97,7 +97,6 @@ class CanvasLineElement extends CanvasElement {
     context.strokeStyle = 'red';
     context.lineWidth = 5;
     context.stroke();
-    // context.closePath();
     super.render(context);
   }
 
@@ -130,6 +129,7 @@ class CanvasSquareElement extends CanvasBaseSquareElement {
 
 class CanvasScreen extends CanvasBaseSquareElement {
   render(context: CanvasRenderingContext2D) : void {
+    context.fillStyle = 'black';
     context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf(), this.point2.y.valueOf());
     super.render(context);
   }
@@ -139,9 +139,11 @@ class CanvasCircleElement extends CanvasElement {
   radius: Number;
   minHeight: Number;
   point1: Point;
+  alpha: Number;
 
   constructor(type: ElementType, radius: Number, point1?: Point) {
     super(type);
+    this.alpha = 1;
     this.radius = radius;
     this.point1 = point1 || new Point(0, 0);
   }
@@ -150,10 +152,22 @@ class CanvasCircleElement extends CanvasElement {
     this.point1 = point;
   }
 
+  updateRadius(radius: Number) : void {
+    this.radius = radius;
+  }
+
+  updateAlpha(alpha: Number) : void {
+    this.alpha = alpha;
+  }
+
   render(context: CanvasRenderingContext2D) : void {
     context.beginPath();
     context.arc(this.point1.x.valueOf(), this.point1.y.valueOf(), this.radius.valueOf(), 0, Math.PI * 2, false);
-    context.stroke();
+    // context.strokeStyle = 'blue';
+    // context.fillStyle = 'white';
+    context.fillStyle = `rgba(255, 255, 255, ${this.alpha.valueOf()})`;
+    // context.stroke();
+    context.fill();
     super.render(context)
   }
 
@@ -174,6 +188,7 @@ class ReticleElement extends CanvasElement {
   }
 
   render(context: CanvasRenderingContext2D) : void {
+    context.strokeStyle = 'white';
     super.render(context);
   }
 
