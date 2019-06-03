@@ -65,4 +65,5 @@ export {
   pointDistance,
   circleCollision,
   circlePointCollision,
+  squarePointCollision,
 }
