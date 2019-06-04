@@ -68,6 +68,7 @@ if (nested) {
 }
 
 let selecting: CanvasElement[] = [];
+let dragSelect: CanvasElement[] = [];
 
 const keyPressed: number[] = [];
 const keyToListen: number[] = [16];
@@ -105,7 +106,7 @@ canvas.addEventListener('mousedown', (event) => {
 const mouseUp = (event: MouseEvent | null = null) => {
   mouseDown = false;
   mouseDownPoint = null;
-  if (temp !== null) {
+  if (temp !== null && !dragging) {
     mouseDownPoint = temp;
     temp = null;
   }
@@ -120,6 +121,9 @@ const mouseUp = (event: MouseEvent | null = null) => {
   selectRect = null;
   drawPoint = null;
   dragging = false;
+  if (dragSelect.length) {
+    selecting = selecting.concat(dragSelect);
+  }
 };
 
 canvas.addEventListener('mouseup', (event) => {
@@ -133,7 +137,10 @@ document.addEventListener('mouseup', () => {
 
 // document.body.addEventListener('mousemove', (event) => {
 window.addEventListener('mousemove', (event) => {
-  dragging = true;
+  if (mouseDown) {
+    dragging = true;
+  }
+
   // console.log('move');
   mouseX = event.clientX;
   mouseY = event.clientY;
@@ -236,16 +243,18 @@ const collisionCheck = (element: CanvasElement, movePoint: Point, nested: Boolea
         if (child.checkCollision(movePoint) && !colliding.length && !colliding.includes(child)) {
           colliding.push(child);
         }
-            
-        if (!mouseDown && clickPoint !== null && child.checkCollision(clickPoint)) {
-          const idx = selecting.indexOf(child)
-          // child.select(!child.isSelected);
-          if (idx === -1) {
-            selecting.push(child);
-          } else {
-            selecting.splice(idx, 1);
+
+        if (clickPoint !== null && child.checkCollision(clickPoint)) {
+          if (!mouseDown) {
+            const idx = selecting.indexOf(child)
+            // child.select(!child.isSelected);
+            if (idx === -1) {
+              selecting.push(child);
+            } else {
+              selecting.splice(idx, 1);
+            }
+            break;
           }
-          break;
         }
       }
     }
@@ -286,7 +295,9 @@ const render = () => {
   // screen.checkCollision(point);
 
   // Check point collision with children of screen
-  const [colliding, selecting] = collisionCheck(screen, point, nested, selectTop, null, mouseDownPoint);
+  const [colliding] = collisionCheck(screen, point, nested, selectTop, null, mouseDownPoint);
+  // , selecting1
+  dragSelect = [];
   mouseDownPoint = null;
   if (selectRect !== null) {
     screen.children.forEach((_child) => {
@@ -294,15 +305,26 @@ const render = () => {
         const child = <CanvasSquareElement>_child;
         if (selectRect!.point1.x.valueOf() <= child.point1.x.valueOf() && selectRect!.point1.y.valueOf() <= child.point1.y.valueOf() && selectRect!.point2.x.valueOf() >= child.point2.x.valueOf() && selectRect!.point2.y.valueOf() >= child.point2.y.valueOf()) {
           if (!selecting.includes(child)) {
-            selecting.push(child);
-            console.log('select this');
+            if (!dragSelect.includes(child)) {
+              dragSelect.push(child);
+            } else {
+              selecting.splice(selecting.indexOf(child), 1);
+            }
+            // console.log('select this');
           }
-        } else if (selecting.includes(child)) {
-          selecting.splice(selecting.indexOf(child), 1);
         }
+        // else if (selecting.includes(child) && !temp.includes(child)) {
+        //   selecting.splice(selecting.indexOf(child), 1);
+        // }
       }
     });
   }
+
+  // selecting = selecting.concat(temp);
+
+  // if (dragging && temp) {
+  //   console.log('dragging', selecting.length);
+  // }
 
   // if (maxDepth !== 0) {
   //   console.log(maxDepth, point);
@@ -334,9 +356,9 @@ const render = () => {
   // }
   // circle.updateAlpha(baseAlpha + Math.sin(angle) * offset);
 
-  screen.render(context, colliding, selecting);
+  screen.render(context, colliding, selecting.concat(dragSelect));
   if (selectRect) {
-    selectRect.render(context, colliding, selecting);
+    selectRect.render(context, colliding, selecting.concat(dragSelect));
   }
 
   // angle += speed;

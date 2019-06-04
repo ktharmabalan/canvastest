@@ -98,6 +98,17 @@ class CanvasBaseSquareElement extends CanvasElement {
       this.point1 = new Point(0, 0);
       this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
     }
+
+    const minX: number = Math.min(this.point1.x.valueOf(), this.point2.x.valueOf());
+    const maxX: number = Math.max(this.point1.x.valueOf(), this.point2.x.valueOf());
+    const minY: number = Math.min(this.point1.y.valueOf(), this.point2.y.valueOf());
+    const maxY: number = Math.max(this.point1.y.valueOf(), this.point2.y.valueOf());
+
+    this.point1 = new Point(minX, minY);
+    this.point2 = new Point(maxX, maxY);
+
+    this.minWidth = maxX - minX;
+    this.minHeight = maxY - minY;
   }
 
   render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
