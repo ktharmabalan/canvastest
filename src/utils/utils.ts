@@ -40,7 +40,7 @@ const inRange = (value: number, min: number, max: number) => {
 // caculate distance between two points
 const pointDistance = (p1: Point, p2: Point) => {
   const dx = p2.x.valueOf() - p1.x.valueOf();
-  const dy = p2.y.valueOf() - p2.y.valueOf();
+  const dy = p2.y.valueOf() - p1.y.valueOf();
   return Math.sqrt(dx * dx + dy * dy);
 };
 
@@ -59,6 +59,20 @@ const circleDistance = (
   const dx = d1.point1.x.valueOf() - d2.point1.x.valueOf();
   const dy = d1.point1.y.valueOf() - d2.point1.y.valueOf();
   return Math.sqrt(dx * dx + dy * dy);
+};
+
+const rangeIntersect = (
+  min1: Number,
+  min2: Number,
+  max1: Number,
+  max2: Number,
+): Boolean => {
+  return (
+    Math.max(min1.valueOf(), max1.valueOf()) >=
+      Math.min(min2.valueOf(), max2.valueOf()) &&
+    Math.min(min1.valueOf(), max1.valueOf()) <=
+      Math.max(min2.valueOf(), max2.valueOf())
+  );
 };
 
 const circleCollision = (
@@ -90,20 +104,6 @@ const squarePointCollision = (
       square.point1.y.valueOf(),
       square.point1.y.valueOf() + square.minHeight.valueOf(),
     )
-  );
-};
-
-const rangeIntersect = (
-  min1: Number,
-  min2: Number,
-  max1: Number,
-  max2: Number,
-): Boolean => {
-  return (
-    Math.max(min1.valueOf(), max1.valueOf()) >=
-      Math.min(min2.valueOf(), max2.valueOf()) &&
-    Math.min(min1.valueOf(), max1.valueOf()) <=
-      Math.max(min2.valueOf(), max2.valueOf())
   );
 };
 

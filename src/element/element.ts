@@ -22,7 +22,7 @@ interface CanvasInterface {
   children: CanvasElement[],
   isColliding: Boolean,
   isSelected: Boolean,
-  render: (context: CanvasRenderingContext2D, coliding: CanvasElement[]) => void;
+  render: (context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) => void;
   addChild: (child: CanvasElement) => void;
   removeChild: (child: CanvasElement) => void;
   checkCollision: (point: Point) => Boolean;
@@ -43,10 +43,10 @@ class CanvasElement implements CanvasInterface {
     this.isColliding = false;
   }
 
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     // console.log(`Called from ${ElementType[this.type]}`)
     this.children.forEach((child) => {
-      child.render(context, coliding);
+      child.render(context, coliding, selecting);
     });
   }
 
@@ -87,45 +87,73 @@ class CanvasBaseSquareElement extends CanvasElement {
     super(type);
     this.minWidth = minWidth;
     this.minHeight = minHeight;
-    this.point1 = point1 || new Point(0, 0);
-    this.point2 = point2 || new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
+
+    if (point1 && point2) {
+      this.point1 = point1;
+      this.point2 = point2;
+    } else if (point1 && !point2) {
+      this.point1 = point1;
+      this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
+    } else {
+      this.point1 = new Point(0, 0);
+      this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
+    }
   }
 
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
-    super.render(context, coliding)
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
+    super.render(context, coliding, selecting)
   }
 }
 
 class CanvasSquareElement extends CanvasBaseSquareElement {
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
-    context.beginPath();
-    context.moveTo(this.point1.x.valueOf(), this.point1.y.valueOf());
-    context.lineTo(this.point2.x.valueOf(), this.point1.y.valueOf());
-    context.lineTo(this.point2.x.valueOf(), this.point2.y.valueOf());
-    context.lineTo(this.point1.x.valueOf(), this.point2.y.valueOf());
-    context.lineTo(this.point1.x.valueOf(), this.point1.y.valueOf());
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
+    // context.beginPath();
+    // context.moveTo(this.point1.x.valueOf(), this.point1.y.valueOf());
+    // context.lineTo(this.point2.x.valueOf(), this.point1.y.valueOf());
+    // context.lineTo(this.point2.x.valueOf(), this.point2.y.valueOf());
+    // context.lineTo(this.point1.x.valueOf(), this.point2.y.valueOf());
+    // context.lineTo(this.point1.x.valueOf(), this.point1.y.valueOf());
+    context.lineWidth = 1;
     context.strokeStyle = 'white';
-    // context.lineWidth = 1;
     // context.stroke();
     context.fillStyle = 'green';
-    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
-    if (this.isSelected) {
+    // context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
+
+    // if (this.isSelected) {
+    if (selecting.includes(this)) {
       context.strokeStyle = 'blue';
       // context.fillStyle = 'blue';
       // context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
     }
-    context.lineWidth = 1;
-    context.stroke();
+    // context.lineWidth = 1;
+    // context.stroke();
     if (coliding.includes(this)) {
       context.fillStyle = 'white';
-      context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
     }
-    super.render(context, coliding);
+    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
+    context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
+    // context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
+    // context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
+
+    super.render(context, coliding, selecting);
+  }
+}
+
+class CanvasSelectSquareElement extends CanvasBaseSquareElement {
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
+    context.lineWidth = 1;
+    context.strokeStyle = 'white';
+    context.fillStyle = 'rgba(255, 255, 255, .2)';
+
+    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
+    context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
+
+    super.render(context, coliding, selecting);
   }
 }
 
 class CanvasScreen extends CanvasBaseSquareElement {
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     // context.lineWidth = 1;
     // context.strokeStyle = 'black';
     context.fillStyle = 'black';
@@ -137,7 +165,7 @@ class CanvasScreen extends CanvasBaseSquareElement {
       context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf(), this.point2.y.valueOf());
       context.stroke();
     }
-    super.render(context, coliding);
+    super.render(context, coliding, selecting);
   }
 }
 
@@ -152,7 +180,7 @@ class CanvasLineElement extends CanvasElement {
     this.point2 = point2;
   }
 
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     context.beginPath();
     context.strokeStyle = 'red';
     context.lineWidth = 1;
@@ -164,7 +192,7 @@ class CanvasLineElement extends CanvasElement {
     context.moveTo(this.point1.x.valueOf(), this.point1.y.valueOf());
     context.lineTo(this.point2.x.valueOf(), this.point2.y.valueOf());
     context.stroke();
-    super.render(context, coliding);
+    super.render(context, coliding, selecting);
   }
 
   updatePoint(point: Point) : void {
@@ -200,7 +228,7 @@ class CanvasCircleElement extends CanvasElement {
     this.alpha = alpha;
   }
 
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     context.beginPath();
     context.arc(this.point1.x.valueOf(), this.point1.y.valueOf(), this.radius.valueOf(), 0, Math.PI * 2, false);
     // context.strokeStyle = 'blue';
@@ -208,7 +236,7 @@ class CanvasCircleElement extends CanvasElement {
     context.fillStyle = `rgba(255, 255, 255, ${this.alpha.valueOf()})`;
     // context.stroke();
     context.fill();
-    super.render(context, coliding)
+    super.render(context, coliding, selecting)
   }
 }
 
@@ -223,9 +251,9 @@ class ReticleElement extends CanvasElement {
     })
   }
 
-  render(context: CanvasRenderingContext2D, coliding: CanvasElement[]) : void {
+  render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     context.strokeStyle = 'white';
-    super.render(context, coliding);
+    super.render(context, coliding, selecting);
   }
 }
 
@@ -236,6 +264,7 @@ export {
   CanvasScreen,
   CanvasLineElement,
   CanvasSquareElement,
+  CanvasSelectSquareElement,
   CanvasCircleElement,
   ReticleElement,
 };
