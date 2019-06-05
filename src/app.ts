@@ -211,6 +211,31 @@ canvas.addEventListener('mousemove', (event) => {
   
   
   if (drawPoint !== null && event !== null) {
+    // let minX: Number | null = null;
+    // let maxX: Number | null = null;
+    // let minY: Number | null = null;
+    // let maxY: Number | null = null;
+
+    // let width = 0;
+    // let height = 0;
+
+    //   const [point1, point2] = child.boundingBox;
+    //   if (minX === null || point1.x.valueOf() < minX) minX = point1.x;
+    //   if (minX === null || point2.x.valueOf() < minX) minX = point2.x;
+    //   if (maxX === null || point1.x.valueOf() > maxX) maxX = point1.x;
+    //   if (maxX === null || point2.x.valueOf() > maxX) maxX = point2.x;
+
+    //   if (minY === null || point1.y.valueOf() < minY) minY = point1.y;
+    //   if (minY === null || point2.y.valueOf() < minY) minY = point2.y;
+    //   if (maxY === null || point1.y.valueOf() > maxY) maxY = point1.y;
+    //   if (maxY === null || point2.y.valueOf() > maxY) maxY = point2.y;
+    //   if (minX !== null && maxX !== null && minY !== null && maxY !== null) {
+    //     width = maxX.valueOf() - minX.valueOf();
+    //     height = maxY.valueOf() - minY.valueOf();
+    //   }
+
+    // return new CanvasSelectSquareElement(ElementType.Square, new Point(minX!, minY!), width, height);
+    // selectRect = new CanvasSelectSquareElement(ElementType.Square, drawPoint, event.clientX - drawPoint.x.valueOf(),  event.clientY - drawPoint.y.valueOf());
     selectRect = new CanvasSelectSquareElement(ElementType.Square, drawPoint, event.clientX - drawPoint.x.valueOf(),  event.clientY - drawPoint.y.valueOf());
     // console.log(selectRect);
   }
