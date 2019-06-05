@@ -7,6 +7,18 @@ enum ElementType {
   Reticle,
 }
 
+enum MoveType {
+  None,
+  Up,
+  UpRight,
+  Right,
+  DownRight,
+  Down,
+  DownLeft,
+  Left,
+  UpLeft,
+}
+
 class Point {
   x: Number;
   y: Number;
@@ -22,25 +34,32 @@ interface CanvasInterface {
   children: CanvasElement[],
   isColliding: Boolean,
   isSelected: Boolean,
+  boundingBox: Point[],
+  point1: Point,
   render: (context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) => void;
   addChild: (child: CanvasElement) => void;
   removeChild: (child: CanvasElement) => void;
   checkCollision: (point: Point) => Boolean;
   select: (selected: Boolean) => void;
+  updatePoint: (x: number, y: number) => void;
 }
 
 class CanvasElement implements CanvasInterface {
   isSelected: Boolean;
   type: ElementType;
+  boundingBox: Point[];
+  point1: Point;
   children: CanvasElement[];
   isColliding: Boolean;
   minWidth: Number;
   minHeight: Number;
 
-  constructor(type: ElementType) {
+  constructor(type: ElementType, point: Point) {
+    this.point1 = point;
     this.type = type;
     this.children = [];
     this.isColliding = false;
+    this.boundingBox = [];
   }
 
   render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
@@ -75,40 +94,46 @@ class CanvasElement implements CanvasInterface {
     return coliding;
   }
 
+  updatePoint(x: number, y: number) {}
 }
 
 class CanvasBaseSquareElement extends CanvasElement {
   minWidth: Number;
   minHeight: Number;
-  point1: Point;
-  point2: Point;
 
-  constructor(type: ElementType, minWidth: Number, minHeight: Number, point1?: Point, point2?: Point) {
-    super(type);
+  constructor(type: ElementType, point: Point, minWidth: Number, minHeight: Number) {
+    super(type, point);
     this.minWidth = minWidth;
     this.minHeight = minHeight;
 
-    if (point1 && point2) {
-      this.point1 = point1;
-      this.point2 = point2;
-    } else if (point1 && !point2) {
-      this.point1 = point1;
-      this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
-    } else {
-      this.point1 = new Point(0, 0);
-      this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
-    }
+    // if (point1 && point2) {
+    //   this.point1 = point1;
+    //   this.point2 = point2;
+    // } else if (point1 && !point2) {
+    //   this.point1 = point1;
+    //   this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
+    // } else {
+    //   this.point1 = new Point(0, 0);
+    //   this.point2 = new Point(this.point1.x.valueOf() + minWidth.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
+    // }
 
-    const minX: number = Math.min(this.point1.x.valueOf(), this.point2.x.valueOf());
-    const maxX: number = Math.max(this.point1.x.valueOf(), this.point2.x.valueOf());
-    const minY: number = Math.min(this.point1.y.valueOf(), this.point2.y.valueOf());
-    const maxY: number = Math.max(this.point1.y.valueOf(), this.point2.y.valueOf());
+    const minX: number = Math.min(this.point1.x.valueOf(), this.point1.x.valueOf() + minWidth.valueOf());
+    const maxX: number = Math.max(this.point1.x.valueOf(), this.point1.x.valueOf() + minWidth.valueOf());
+    const minY: number = Math.min(this.point1.y.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
+    const maxY: number = Math.max(this.point1.y.valueOf(), this.point1.y.valueOf() + minHeight.valueOf());
 
     this.point1 = new Point(minX, minY);
-    this.point2 = new Point(maxX, maxY);
+    this.boundingBox = [this.point1, new Point(maxX, maxY)];
+  }
 
-    this.minWidth = maxX - minX;
-    this.minHeight = maxY - minY;
+  updatePoint(x: number, y: number) {
+    let _x = this.point1.x.valueOf() + x;
+    let _y = this.point1.y.valueOf() + y;
+    this.point1.x = _x;
+    this.point1.y = _y;
+    // this.minWidth = _x + this.minWidth.valueOf();
+    // this.minHeight = _y + this.minHeight.valueOf();
+    this.boundingBox = [this.point1, new Point(_x + this.minWidth.valueOf(), _y + this.minHeight.valueOf())];
   }
 
   render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
@@ -125,9 +150,9 @@ class CanvasSquareElement extends CanvasBaseSquareElement {
     // context.lineTo(this.point1.x.valueOf(), this.point2.y.valueOf());
     // context.lineTo(this.point1.x.valueOf(), this.point1.y.valueOf());
     context.lineWidth = 1;
-    context.strokeStyle = 'white';
+    context.strokeStyle = 'black';
     // context.stroke();
-    context.fillStyle = 'green';
+    context.fillStyle = 'rgba(255, 255, 255, 0)';
     // context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
 
     // if (this.isSelected) {
@@ -138,11 +163,12 @@ class CanvasSquareElement extends CanvasBaseSquareElement {
     }
     // context.lineWidth = 1;
     // context.stroke();
-    if (coliding.includes(this)) {
-      context.fillStyle = 'white';
-    }
-    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
-    context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
+    // if (coliding.includes(this)) {
+    //   context.fillStyle = 'white';
+    // }
+
+    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.minWidth.valueOf(), this.minHeight.valueOf());
+    context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.minWidth.valueOf(), this.minHeight.valueOf());
     // context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
     // context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), pointDistance(this.point1, this.point2), pointDistance(this.point1, this.point2));
 
@@ -153,11 +179,16 @@ class CanvasSquareElement extends CanvasBaseSquareElement {
 class CanvasSelectSquareElement extends CanvasBaseSquareElement {
   render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     context.lineWidth = 1;
-    context.strokeStyle = 'white';
-    context.fillStyle = 'rgba(255, 255, 255, .2)';
+    // context.strokeStyle = 'white';
+    // context.strokeStyle = 'rgba(121, 169, 250, 1)';
+    context.strokeStyle = 'rgba(21, 69, 250, 1)';
+    // context.fillStyle = 'rgba(255, 255, 255, .2)';
+    // context.fillStyle = 'rgba(202, 218, 245, .5)';
+    // context.fillStyle = 'rgba(163, 194, 247, .5)';
+    context.fillStyle = 'rgba(121, 169, 250, .5)';
 
-    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
-    context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf() - this.point1.x.valueOf(), this.point2.y.valueOf() - this.point1.y.valueOf());
+    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.minWidth.valueOf(), this.minHeight.valueOf());
+    context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.minWidth.valueOf(), this.minHeight.valueOf());
 
     super.render(context, coliding, selecting);
   }
@@ -167,27 +198,26 @@ class CanvasScreen extends CanvasBaseSquareElement {
   render(context: CanvasRenderingContext2D, coliding: CanvasElement[], selecting: CanvasElement[]) : void {
     // context.lineWidth = 1;
     // context.strokeStyle = 'black';
-    context.fillStyle = 'black';
-    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf(), this.point2.y.valueOf());
+    context.fillStyle = 'rgba(242, 242, 242, 1)';
+    context.fillRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.minWidth.valueOf(), this.minHeight.valueOf());
+
     // if (this.isColliding) {
-    if (coliding.includes(this)) {
-      context.lineWidth = 4;
-      context.strokeStyle = 'green';
-      context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf(), this.point2.y.valueOf());
-      context.stroke();
-    }
+    // if (coliding.includes(this)) {
+    //   context.lineWidth = 4;
+    //   context.strokeStyle = 'green';
+    //   context.strokeRect(this.point1.x.valueOf(), this.point1.y.valueOf(), this.point2.x.valueOf(), this.point2.y.valueOf());
+    //   context.stroke();
+    // }
     super.render(context, coliding, selecting);
   }
 }
 
 class CanvasLineElement extends CanvasElement {
-  point1: Point;
   point2: Point;
 
   constructor(type: ElementType, point1: Point, point2: Point) {
-    super(type);
+    super(type, point1);
     // console.log(point1, point2);
-    this.point1 = point1;
     this.point2 = point2;
   }
 
@@ -206,29 +236,28 @@ class CanvasLineElement extends CanvasElement {
     super.render(context, coliding, selecting);
   }
 
-  updatePoint(point: Point) : void {
-    this.point1.x = this.point1.x.valueOf() + point.x.valueOf();
-    this.point1.y = this.point1.y.valueOf() + point.y.valueOf();
-    this.point2.x = this.point2.x.valueOf() + point.x.valueOf();
-    this.point2.y = this.point2.y.valueOf() + point.y.valueOf();
+  updatePoint(x: number, y: number) : void {
+    this.point1.x = this.point1.x.valueOf() + x.valueOf();
+    this.point1.y = this.point1.y.valueOf() + y.valueOf();
+    this.point2.x = this.point2.x.valueOf() + x.valueOf();
+    this.point2.y = this.point2.y.valueOf() + y.valueOf();
   }
 }
 
 class CanvasCircleElement extends CanvasElement {
   radius: Number;
   minHeight: Number;
-  point1: Point;
   alpha: Number;
 
-  constructor(type: ElementType, radius: Number, point1?: Point) {
-    super(type);
+  constructor(type: ElementType, point: Point, radius: Number) {
+    super(type, point);
     this.alpha = 1;
     this.radius = radius;
-    this.point1 = point1 || new Point(0, 0);
   }
 
-  updatePoint(point: Point) : void {
-    this.point1 = point;
+  updatePoint(x: number, y: number) : void {
+    this.point1.x = x;
+    this.point1.y = y;
   }
 
   updateRadius(radius: Number) : void {
@@ -252,13 +281,13 @@ class CanvasCircleElement extends CanvasElement {
 }
 
 class ReticleElement extends CanvasElement {
-  constructor(type: ElementType) {
-    super(type);
+  constructor(type: ElementType, point: Point) {
+    super(type, point);
   }
 
-  updatePoint(point: Point) : void {
+  updatePoint(x: number, y: number) : void {
     this.children.forEach((child) => {
-      (<CanvasLineElement>child).updatePoint(point);
+      (<CanvasLineElement>child).updatePoint(x, y);
     })
   }
 
@@ -269,6 +298,7 @@ class ReticleElement extends CanvasElement {
 }
 
 export {
+  MoveType,
   CanvasElement,
   ElementType,
   Point,

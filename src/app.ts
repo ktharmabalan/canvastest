@@ -1,4 +1,4 @@
-import { Point, ElementType, CanvasSquareElement, CanvasLineElement, CanvasCircleElement, CanvasScreen, ReticleElement, CanvasElement, CanvasSelectSquareElement } from './element/element';
+import { Point, ElementType, CanvasSquareElement, CanvasLineElement, CanvasCircleElement, CanvasScreen, ReticleElement, CanvasElement, CanvasSelectSquareElement, MoveType } from './element/element';
 import { clamp, pointDistance, circleCollision, circlePointCollision, } from './utils/utils';
 
 const app = <HTMLDivElement>document.getElementById('app');
@@ -20,24 +20,25 @@ const context = <CanvasRenderingContext2D>canvas.getContext('2d');
 // height = -height
 const ratio = width >= height ? (width / height) : (height / width);
 // const screen = new CanvasScreen(ElementType.Square, width - 150 * ratio, height - 150, new Point(50 * ratio, 50));
-const screen = new CanvasScreen(ElementType.Square, screenWidth, screenHeight);
-let line = new CanvasLineElement(ElementType.Line, new Point(0, 0), new Point(width, height));
+const origin = new Point(0, 0);
+const screen = new CanvasScreen(ElementType.Square, origin, screenWidth, screenHeight);
+let line = new CanvasLineElement(ElementType.Line, origin, new Point(width, height));
 screen.addChild(line);
 
 // // Create Reticle
 const centerX = width/2;
 const centerY = height/2;
 const length = 50;
-const reticle = new ReticleElement(ElementType.Reticle);
+const reticle = new ReticleElement(ElementType.Reticle, origin);
 reticle.addChild(new CanvasLineElement(ElementType.Line, new Point(centerX - length, centerY), new Point(centerX + length, centerY)));
 reticle.addChild(new CanvasLineElement(ElementType.Line, new Point(centerX, centerY - length), new Point(centerX, centerY + length)));
 
 const baseRadius = length * 2;
-const circle = new CanvasCircleElement(ElementType.Circle, baseRadius, new Point(centerX, centerY));
+const circle = new CanvasCircleElement(ElementType.Circle, new Point(centerX, centerY), baseRadius);
 circle.addChild(reticle);
 screen.addChild(circle);
 
-const mouseCircle = new CanvasCircleElement(ElementType.Circle, 20, new Point(centerX, centerY));
+const mouseCircle = new CanvasCircleElement(ElementType.Circle, new Point(centerX, centerY), 20);
 screen.addChild(mouseCircle);
  
 let nested = false;
@@ -45,9 +46,9 @@ const rectWidth = 150;
 let rects: CanvasSquareElement[] = [] ;
 for (let index = 0; index < 5; index++) {
   if (nested) {
-    rects.push(new CanvasSquareElement(ElementType.Square, rectWidth, rectWidth, new Point(screen.point1.x.valueOf() + 50 * index, screen.point1.y.valueOf() + 50 * index)));
+    rects.push(new CanvasSquareElement(ElementType.Square, new Point(screen.point1.x.valueOf() + 50 * index, screen.point1.y.valueOf() + 50 * index), rectWidth, rectWidth));
   } else {
-    screen.addChild(new CanvasSquareElement(ElementType.Square, rectWidth, rectWidth, new Point(screen.point1.x.valueOf() + rectWidth * index, screen.point1.y.valueOf() + 50 * index)));
+    screen.addChild(new CanvasSquareElement(ElementType.Square, new Point(screen.point1.x.valueOf() + rectWidth * index, screen.point1.y.valueOf() + 50 * index), rectWidth, rectWidth));
     // rect = new CanvasSquareElement(ElementType.Square, rectWidth, rectWidth, new Point(screen.point1.x.valueOf() + 50 + (rectWidth + 20) * index, screen.point1.y.valueOf() + 50 + (rectWidth + 20) * index));
   }
 }
@@ -70,6 +71,43 @@ if (nested) {
 let selecting: CanvasElement[] = [];
 let dragSelect: CanvasElement[] = [];
 
+const drawBoundingBox = () : CanvasSelectSquareElement | null => {
+  // console.log('draw', selecting.length, selecting);
+  if (selecting.length > 1) {
+    // console.log('inside');
+    let minX: Number | null = null;
+    let maxX: Number | null = null;
+    let minY: Number | null = null;
+    let maxY: Number | null = null;
+
+    let width = 0;
+    let height = 0;
+
+    selecting.forEach((element) => {
+      if (element.type === ElementType.Square) {
+        const child = <CanvasSquareElement>element;
+        const [point1, point2] = child.boundingBox;
+        if (minX === null || point1.x.valueOf() < minX) minX = point1.x;
+        if (minX === null || point2.x.valueOf() < minX) minX = point2.x;
+        if (maxX === null || point1.x.valueOf() > maxX) maxX = point1.x;
+        if (maxX === null || point2.x.valueOf() > maxX) maxX = point2.x;
+
+        if (minY === null || point1.y.valueOf() < minY) minY = point1.y;
+        if (minY === null || point2.y.valueOf() < minY) minY = point2.y;
+        if (maxY === null || point1.y.valueOf() > maxY) maxY = point1.y;
+        if (maxY === null || point2.y.valueOf() > maxY) maxY = point2.y;
+        if (minX !== null && maxX !== null && minY !== null && maxY !== null) {
+          width = maxX.valueOf() - minX.valueOf();
+          height = maxY.valueOf() - minY.valueOf();
+        }
+      }
+    });
+
+    return new CanvasSelectSquareElement(ElementType.Square, new Point(minX!, minY!), width, height);
+  }
+  return null;
+};
+
 const keyPressed: number[] = [];
 const keyToListen: number[] = [16];
 const keyMap = {
@@ -86,6 +124,9 @@ let temp: Point | null = null;
 let drawPoint: Point | null = null;
 let selectRect: CanvasSelectSquareElement | null = null;
 let dragging = false;
+let collidedElement: CanvasSquareElement | null = null;
+let collisionResult: [CanvasSquareElement, number, number] | null = null;
+let moveCoords: { x: number, y: number } | null = {x: 0, y: 0};
 
 canvas.addEventListener('mousedown', (event) => {
   // console.log('mousedown');
@@ -93,7 +134,9 @@ canvas.addEventListener('mousedown', (event) => {
   mouseDown = true;
   mouseX = event.clientX;
   mouseY = event.clientY;
-  
+  const { x, y } = event;
+  moveCoords = { x, y };
+
   selectRect = null;
 
   if (!keyPressed.includes(keyMap.shift)) {
@@ -103,6 +146,7 @@ canvas.addEventListener('mousedown', (event) => {
   }
 });
 
+let drawingRect: CanvasSelectSquareElement | null = null;
 const mouseUp = (event: MouseEvent | null = null) => {
   mouseDown = false;
   mouseDownPoint = null;
@@ -110,6 +154,7 @@ const mouseUp = (event: MouseEvent | null = null) => {
     mouseDownPoint = temp;
     temp = null;
   }
+  moveCoords = null;
   mouseX = width * 10;
   mouseY = height * 10;
   
@@ -120,10 +165,19 @@ const mouseUp = (event: MouseEvent | null = null) => {
   
   selectRect = null;
   drawPoint = null;
+  collidedElement = null;
+  collisionResult = null;
   dragging = false;
   if (dragSelect.length) {
     selecting = selecting.concat(dragSelect);
   }
+
+  // if (selecting.length) {
+  //   drawingRect = drawBoundingBox();
+  // }
+  // new CanvasSelectSquareElement(ElementType.Square, 0, 0, drawPoint, new Point(event.clientX, event.clientY))
+  // const drawingBox = drawBoundingBox();
+
 };
 
 canvas.addEventListener('mouseup', (event) => {
@@ -136,9 +190,17 @@ document.addEventListener('mouseup', () => {
 });
 
 // document.body.addEventListener('mousemove', (event) => {
-window.addEventListener('mousemove', (event) => {
+canvas.addEventListener('mousemove', (event) => {
+  // console.log(event);
+  const { x, y } = event;
+  // const { movementX, movementY } = event;
+  // console.log(movementX, movementY);
   if (mouseDown) {
     dragging = true;
+  }
+  
+  if (moveCoords !== null) {
+    moveCoords = { x, y };
   }
 
   // console.log('move');
@@ -147,8 +209,9 @@ window.addEventListener('mousemove', (event) => {
   // mouseX = clamp(event.clientX, screen.point1.x.valueOf() + 20, screen.point2.x.valueOf() - 20 + 50 * ratio);
   // mouseY = clamp(event.clientY, screen.point1.y.valueOf() + 20, screen.point2.y.valueOf() - 20 + 50);
   
+  
   if (drawPoint !== null && event !== null) {
-    selectRect = new CanvasSelectSquareElement(ElementType.Square, 0, 0, drawPoint, new Point(event.clientX, event.clientY));
+    selectRect = new CanvasSelectSquareElement(ElementType.Square, drawPoint, event.clientX - drawPoint.x.valueOf(),  event.clientY - drawPoint.y.valueOf());
     // console.log(selectRect);
   }
 });
@@ -279,12 +342,48 @@ const collisionCheck = (element: CanvasElement, movePoint: Point, nested: Boolea
   return [colliding, selecting];
 }
 
+const collisionOnlyCheck = (element: CanvasElement, clickPoint: Point) : [CanvasSquareElement, number, number] | null => {
+  const children = element.children;
+  const childrenCount = children.length;
+  
+  let x = 0;
+  let y = 0;
+  let colliding: [CanvasSquareElement, number, number] | null = null;
+
+  for (let index = childrenCount - 1; index > 0; index--) {
+    const child = children[index];
+
+    if (child.checkCollision(clickPoint) && colliding === null && child.type === ElementType.Square && child !== screen) {
+      const cElement = child as CanvasSquareElement;
+      x = clickPoint.x.valueOf() - cElement.point1.x.valueOf();
+      y = clickPoint.y.valueOf() - cElement.point1.y.valueOf();
+      colliding = [cElement, x, y];
+      // console.log(x, y);
+      break;
+    }
+  }
+
+  return colliding;
+}
+
 let selectTop = true;
 // selectTop
 //    nested: select the last descendent of a element 
 //    else: select all decendents of an element
 // else
 //   nested
+
+const moveMap = [
+  'None',
+  'Up',
+  'UpRight',
+  'Right',
+  'DownRight',
+  'Down',
+  'DownLeft',
+  'Left',
+  'UpLeft'
+];
 
 const render = () => {
   const point = new Point(mouseX, mouseY);
@@ -293,6 +392,69 @@ const render = () => {
   // }
 
   // screen.checkCollision(point);
+
+  if (dragging && temp && moveCoords && !keyPressed.includes(keyMap.shift)) {
+    // if (!collidedElement) {
+    if (!collisionResult) {
+      console.log('get COLLIDED');
+      // collisionResult = collisionOnlyCheck(screen, temp);
+      collisionResult = collisionOnlyCheck(screen, new Point(moveCoords.x.valueOf(), moveCoords.y.valueOf()));
+      // [collidedElement,] = collisionResult!;
+    }
+
+    if (collisionResult) {
+      // console.log(collidedElement.offset);
+      let movement = MoveType.None;
+      let dx: number = 0;
+      let dy: number = 0;
+      
+      let [, x, y] = collisionResult;
+      if (collidedElement === null) {
+        [collidedElement, x, y] = collisionResult;
+      }
+      dx = moveCoords.x - (collidedElement!.point1.x.valueOf() + x);
+      dy = moveCoords.y - (collidedElement!.point1.y.valueOf() + y);
+
+      let xOffset = 1;
+      let yOffset = 1;
+
+      if (dx > 0 && dy > 0) {
+        movement = MoveType.DownLeft;
+        yOffset *= -1;
+      } else if (dx < 0 && dy > 0) {
+        movement = MoveType.DownRight;
+        yOffset *= -1;
+        xOffset *= -1;
+      } else if (dx === 0 && dy > 0) {
+        movement = MoveType.Down;
+        yOffset *= -1;
+      } else if (dx === 0 && dy < 0) {
+        movement = MoveType.Up;
+      } else if (dx > 0 && dy < 0) {
+        movement = MoveType.UpLeft;
+      } else if (dx < 0 && dy < 0) {
+        movement = MoveType.UpRight;
+        xOffset *= -1;
+      } else if (dx < 0 && dy === 0) {
+        movement = MoveType.Left;
+      } else if (dx > 0 && dy === 0) {
+        movement = MoveType.Right;
+        xOffset *= -1;
+      }
+      // console.log(collidedElement === screen);
+      // console.log(dx, dy);
+      // console.log(dx * xOffset, dy * yOffset);
+
+      collidedElement.updatePoint(dx, dy);
+      // collidedElement.updateOffset(dx * xOffset, dy * yOffset);
+      // // console.log(moveMap[movement], xOffset * dx, yOffset * dy);
+    }
+    // console.log('dragging', temp, selecting.length);
+
+    // console.log(collided);
+    // const collidedElement = new CanvasSelectSquareElement(ElementType.Square, 0, 0, collided.boundingBox[0], collided.boundingBox[1]);
+    // collidedElement.render(context, colliding, selecting.concat(dragSelect));
+  }
 
   // Check point collision with children of screen
   const [colliding] = collisionCheck(screen, point, nested, selectTop, null, mouseDownPoint);
@@ -303,7 +465,7 @@ const render = () => {
     screen.children.forEach((_child) => {
       if (_child.type === ElementType.Square) {
         const child = <CanvasSquareElement>_child;
-        if (selectRect!.point1.x.valueOf() <= child.point1.x.valueOf() && selectRect!.point1.y.valueOf() <= child.point1.y.valueOf() && selectRect!.point2.x.valueOf() >= child.point2.x.valueOf() && selectRect!.point2.y.valueOf() >= child.point2.y.valueOf()) {
+        if (selectRect!.point1.x.valueOf() <= child.point1.x.valueOf() && selectRect!.point1.y.valueOf() <= child.point1.y.valueOf() && (selectRect!.point1.x.valueOf() + selectRect!.minWidth.valueOf()) >= child.point1.x.valueOf() && selectRect!.point1.y.valueOf() + selectRect!.minHeight.valueOf() >= child.point1.y.valueOf()) {
           if (!selecting.includes(child)) {
             if (!dragSelect.includes(child)) {
               dragSelect.push(child);
@@ -313,18 +475,9 @@ const render = () => {
             // console.log('select this');
           }
         }
-        // else if (selecting.includes(child) && !temp.includes(child)) {
-        //   selecting.splice(selecting.indexOf(child), 1);
-        // }
       }
     });
   }
-
-  // selecting = selecting.concat(temp);
-
-  // if (dragging && temp) {
-  //   console.log('dragging', selecting.length);
-  // }
 
   // if (maxDepth !== 0) {
   //   console.log(maxDepth, point);
@@ -359,6 +512,13 @@ const render = () => {
   screen.render(context, colliding, selecting.concat(dragSelect));
   if (selectRect) {
     selectRect.render(context, colliding, selecting.concat(dragSelect));
+  }
+
+  if (selecting.length) {
+    drawingRect = drawBoundingBox();
+    if (drawingRect) {
+      drawingRect.render(context, colliding, selecting.concat(dragSelect));
+    }
   }
 
   // angle += speed;
