@@ -32,3 +32,23 @@ html, body, #app {
   background-color: #fff;
 }
 
+#element-container ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#element-container ul > li {
+  padding: 5px 10px;
+  margin: 5px;
+}
+/* #element-container ul > li:first-child {
+  margin-top: 5px;
+} */
+#element-container ul > li:hover,
+#element-container ul > li.selected {
+  cursor: pointer;
+  background-color: gray;
+  color: white;
+  border-radius: 5px;
+}

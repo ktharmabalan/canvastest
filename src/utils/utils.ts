@@ -66,7 +66,7 @@ const rangeIntersect = (
   min2: Number,
   max1: Number,
   max2: Number,
-): Boolean => {
+): boolean => {
   return (
     Math.max(min1.valueOf(), max1.valueOf()) >=
       Math.min(min2.valueOf(), max2.valueOf()) &&
@@ -78,21 +78,21 @@ const rangeIntersect = (
 const circleCollision = (
   c1: CanvasCircleElement,
   c2: CanvasCircleElement,
-): Boolean => {
+): boolean => {
   return circleDistance(c1, c2) <= c1.radius.valueOf() + c2.radius.valueOf();
 };
 
 const circlePointCollision = (
   point: Point,
   circle: CanvasCircleElement,
-): Boolean => {
+): boolean => {
   return pointDistance(point, circle.point1) < circle.radius;
 };
 
 const squarePointCollision = (
   point: Point,
   square: CanvasSquareElement,
-): Boolean => {
+): boolean => {
   return (
     inRange(
       point.x.valueOf(),
@@ -110,7 +110,7 @@ const squarePointCollision = (
 const squareSquareCollision = (
   square1: CanvasSquareElement,
   square2: CanvasSquareElement,
-): Boolean => {
+): boolean => {
   return (
     rangeIntersect(
       square1.point1.x.valueOf(),
