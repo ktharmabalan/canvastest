@@ -97,12 +97,27 @@ const squarePointCollision = (
     inRange(
       point.x.valueOf(),
       square.point1.x.valueOf(),
-      square.point1.x.valueOf() + square.minWidth.valueOf(),
+      square.point1.x.valueOf() + square[1].x.valueOf(),
     ) &&
     inRange(
       point.y.valueOf(),
       square.point1.y.valueOf(),
       square.point1.y.valueOf() + square.minHeight.valueOf(),
+    )
+  );
+};
+
+const boundingPointCollision = (point: Point, square: Point[]): boolean => {
+  return (
+    inRange(
+      point.x.valueOf(),
+      square[0].x.valueOf(),
+      square[0].x.valueOf() + square[1].x.valueOf(),
+    ) &&
+    inRange(
+      point.y.valueOf(),
+      square[0].y.valueOf(),
+      square[0].y.valueOf() + square[1].y.valueOf(),
     )
   );
 };
@@ -133,4 +148,5 @@ export {
   circleCollision,
   circlePointCollision,
   squarePointCollision,
+  boundingPointCollision,
 };
